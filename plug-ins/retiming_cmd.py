@@ -12,21 +12,22 @@ def maya_useNewAPI():
     """
     pass
 
-
+#MPxCommand allow us to access to its methods
 class RetimingCmd(om.MPxCommand):
 
     COMMAND_NAME = "RetimingCmd"
-
+    # MSyntax.kDouble to return the appropiate type of value
     VALUE_FLAG = ["-v", "-value", om.MSyntax.kDouble]
     INCREMENTAL_FLAG = ["-i", "-incremental"]
 
 
     def __init__(self):
         super(RetimingCmd, self).__init__()
-
+        #Creating an instance of the animation curves that allows to access to the "doIt" and "unDoIt" methods
         self.anim_curve_change = oma.MAnimCurveChange()
 
         self.num_keys_updated = 0
+        # Set and retrieve anim time values in the specified units
         self.max_time = om.MTime(9999999, om.MTime.uiUnit())
 
     def doIt(self, arg_list):
@@ -54,6 +55,7 @@ class RetimingCmd(om.MPxCommand):
         self.anim_curve_change.redoIt()
 
     def isUndoable(self):
+        #The function should only be undoable if one or more keys were updated
         return self.num_keys_updated > 0
 
 
@@ -153,7 +155,7 @@ class RetimingCmd(om.MPxCommand):
 
     def find_closest_index(self, anim_curve_fn, target_time):
         """
-        Find closest index without going past the target time
+        Find the closest index without going past the target time
         """
         index = anim_curve_fn.findClosest(target_time)
         closest_time = anim_curve_fn.input(index)
@@ -212,9 +214,9 @@ class RetimingCmd(om.MPxCommand):
 
     @classmethod
     def create_syntax(cls):
-
+        # It allows us to specify the arguments and flags that are passed to the command
         syntax = om.MSyntax()
-
+        # Specifies the type of arguments for both the incremental parameter and the value
         syntax.addFlag(*cls.VALUE_FLAG)
         syntax.addFlag(*cls.INCREMENTAL_FLAG)
 
@@ -254,5 +256,5 @@ if __name__ == "__main__":
     plugin_name = "retiming_cmd.py"
     cmds.evalDeferred('if cmds.pluginInfo("{0}", q=True, loaded=True): cmds.unloadPlugin("{0}")'.format(plugin_name))
     cmds.evalDeferred('if not cmds.pluginInfo("{0}", q=True, loaded=True): cmds.loadPlugin("{0}")'.format(plugin_name))
-
+    #Creates a polycube with some keyframes
     cmds.evalDeferred('cmds.polyCube(); cmds.setKeyframe(); cmds.currentTime(2); cmds.setKeyframe(); cmds.currentTime(3); cmds.setKeyframe(); cmds.currentTime(4); cmds.setKeyframe()')
