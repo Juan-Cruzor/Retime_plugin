@@ -12,7 +12,7 @@ def maya_useNewAPI():
     """
     pass
 
-#MPxCommand allow us to access to its methods
+#MPxCommand allows us to access to its methods
 class RetimingCmd(om.MPxCommand):
 
     COMMAND_NAME = "RetimingCmd"
@@ -40,6 +40,8 @@ class RetimingCmd(om.MPxCommand):
         if arg_db.isFlagSet(RetimingCmd.VALUE_FLAG[0]):
             value = om.MTime(arg_db.flagArgumentDouble(RetimingCmd.VALUE_FLAG[0], 0), om.MTime.uiUnit())
             incremental = arg_db.isFlagSet(RetimingCmd.INCREMENTAL_FLAG[0])
+            #The command's MSyntax has set the object format to kSelectionList then
+            #this method will return the objects passed to the command as an MSelectionList
             selection_list = arg_db.getObjectList()
 
             self.do_retiming(selection_list, value, incremental)
@@ -166,14 +168,20 @@ class RetimingCmd(om.MPxCommand):
 
     def get_anim_curves(self, selection_list):
         """
+        This function turns the items from the selection list into dependency graph nodes, then calls the get_anim_curves_from_connection function
             Args:
                 selection_list[List]
+
+            Returns: 
+                Animation curves[List]
         """
         anim_curves = []
-
+        #Class for iterating over the items in an MSelection list
         sel_iter = om.MItSelectionList(selection_list)
         while not sel_iter.isDone():
+            #Method of the MItSelection List class
             obj = sel_iter.getDependNode()
+            # MFnDependencyNodes maya class allows the creation and manipulation of dependency graph nodes
             depend_fn = om.MFnDependencyNode(obj)
 
             self.get_anim_curves_from_connections(depend_fn, anim_curves)
@@ -183,15 +191,24 @@ class RetimingCmd(om.MPxCommand):
         return anim_curves
 
     def get_anim_curves_from_connections(self, depend_fn, anim_curves):
+            """
+            Function that iterates over nodes of the dependency graph, 
+            turns them into an anim curve node and then appends them into a list
+            Args:
+                    dependend_fn: Dependency graph node
+                    anim_curves[List]
+            """
         plugs = depend_fn.getConnections()
         for plug in plugs:
             if plug.isKeyable and not plug.isLocked:
+                # The plug you want to start from, the root, the direction, the trasversal (equidistant from root first), level of detail of the iteration
+
                 dg_iter = om.MItDependencyGraph(plug, om.MFn.kAnimCurve, om.MItDependencyGraph.kUpstream, om.MItDependencyGraph.kBreadthFirst, om.MItDependencyGraph.kNodeLevel)
 
                 while not dg_iter.isDone():
                     if len(dg_iter.getNodePath()) > 2:
                         break
-
+                    # Create an Anim Curve Node and connect its output to any animatable attribute on another Node
                     anim_curve_fn = oma.MFnAnimCurve(dg_iter.currentNode())
                     anim_curves.append(anim_curve_fn)
 
@@ -219,7 +236,7 @@ class RetimingCmd(om.MPxCommand):
         # Specifies the type of arguments for both the incremental parameter and the value
         syntax.addFlag(*cls.VALUE_FLAG)
         syntax.addFlag(*cls.INCREMENTAL_FLAG)
-
+        # Setting the object type and setting the minimun to 1
         syntax.setObjectType(om.MSyntax.kSelectionList, 1)
         syntax.useSelectionAsDefault(True)
 
@@ -237,6 +254,7 @@ def initializePlugin(plugin):
         plugin_fn.registerCommand(RetimingCmd.COMMAND_NAME, RetimingCmd.creator, RetimingCmd.create_syntax)
     except:
         om.MGlobal.displayError("Failed to register command: {0}".format(RetimingCmd.COMMAND_NAME))
+
 
 
 def uninitializePlugin(plugin):
